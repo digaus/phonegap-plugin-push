@@ -327,13 +327,13 @@
                 [self setFcmSandbox:@YES];
             }
 
-            if (notificationMessage) {            // if there is a pending startup notification
+           // if (notificationMessage) {            // if there is a pending startup notification
                 dispatch_async(dispatch_get_main_queue(), ^{
-                    // delay to allow JS event handlers to be setup
-                    [self performSelector:@selector(notificationReceived) withObject:nil afterDelay: 0.5];
+                        // delay to allow JS event handlers to be setup
+                        [self performSelector:@selector(notificationReceived) withObject:nil afterDelay: 0.5];
                 });
-            }
-
+            //}
+            
         }];
     }
 }
@@ -391,24 +391,36 @@
     NSLog(@"Push Plugin register failed");
     [self failWithMessage:self.callbackId withMsg:@"" withError:error];
 }
-
 - (void)notificationReceived {
     NSLog(@"Notification received");
+    if (self.notificationMessage) {
+        [self triggerNotificationReceived: self.notificationMessage];
+    }
+    [[UNUserNotificationCenter currentNotificationCenter] getDeliveredNotificationsWithCompletionHandler:^(NSArray<UNNotification *> * _Nonnull notifications) {
+        for (UNNotification* notification in notifications) {
+            NSLog(@"NotificationsDelivered %@", notification);
+            [self triggerNotificationReceived: notification.request.content.userInfo];
+        }
+    }];
+ 
+   
+}
 
+- (void)triggerNotificationReceived:(NSDictionary*)notificationMessage {
     if (notificationMessage && self.callbackId != nil)
     {
         NSMutableDictionary* message = [NSMutableDictionary dictionaryWithCapacity:4];
         NSMutableDictionary* additionalData = [NSMutableDictionary dictionaryWithCapacity:4];
-
-
+        
+        
         for (id key in notificationMessage) {
             if ([key isEqualToString:@"aps"]) {
                 id aps = [notificationMessage objectForKey:@"aps"];
-
+                
                 for(id key in aps) {
                     NSLog(@"Push Plugin key: %@", key);
                     id value = [aps objectForKey:key];
-
+                    
                     if ([key isEqualToString:@"alert"]) {
                         if ([value isKindOfClass:[NSDictionary class]]) {
                             for (id messageKey in value) {
@@ -441,31 +453,30 @@
                 [additionalData setObject:[notificationMessage objectForKey:key] forKey:key];
             }
         }
-
+        
         if (isInline) {
             [additionalData setObject:[NSNumber numberWithBool:YES] forKey:@"foreground"];
         } else {
             [additionalData setObject:[NSNumber numberWithBool:NO] forKey:@"foreground"];
         }
-
+        
         if (coldstart) {
             [additionalData setObject:[NSNumber numberWithBool:YES] forKey:@"coldstart"];
         } else {
             [additionalData setObject:[NSNumber numberWithBool:NO] forKey:@"coldstart"];
         }
-
+        
         [message setObject:additionalData forKey:@"additionalData"];
-
+        
         // send notification message
         CDVPluginResult* pluginResult = [CDVPluginResult resultWithStatus:CDVCommandStatus_OK messageAsDictionary:message];
         [pluginResult setKeepCallbackAsBool:YES];
         [self.commandDelegate sendPluginResult:pluginResult callbackId:self.callbackId];
-
+        
         self.coldstart = NO;
         self.notificationMessage = nil;
     }
 }
-
 - (void)clearNotification:(CDVInvokedUrlCommand *)command
 {
     NSNumber *notId = [command.arguments objectAtIndex:0];
