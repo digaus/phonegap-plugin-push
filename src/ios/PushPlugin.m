@@ -485,11 +485,18 @@
          * If the server generates a unique "notId" for every push notification, there should only be one match in these arrays, but if not, it will delete
          * all notifications with the same value for "notId"
          */
-        NSPredicate *matchingNotificationPredicate = [NSPredicate predicateWithFormat:@"request.content.userInfo.notId == %@", notId];
-        NSArray<UNNotification *> *matchingNotifications = [notifications filteredArrayUsingPredicate:matchingNotificationPredicate];
+        NSLog(@"Push Plugin clear notId %@", notId);
         NSMutableArray<NSString *> *matchingNotificationIdentifiers = [NSMutableArray array];
-        for (UNNotification *notification in matchingNotifications) {
-            [matchingNotificationIdentifiers addObject:notification.request.identifier];
+
+        for (UNNotification *notification in notifications) {
+            NSNumber* notificationId = [notification.request.content.userInfo objectForKey:@"notId"];
+            NSLog(@"Push Plugin try clear not %@", notificationId);
+            if (notificationId != nil) {
+                if ([notId doubleValue] == [notificationId doubleValue]) {
+                    NSLog(@"Push Plugin clear not %@", notificationId);
+                    [matchingNotificationIdentifiers addObject:notification.request.identifier];
+                }
+            }
         }
         [[UNUserNotificationCenter currentNotificationCenter] removeDeliveredNotificationsWithIdentifiers:matchingNotificationIdentifiers];
         
@@ -498,6 +505,7 @@
         [self.commandDelegate sendPluginResult:commandResult callbackId:command.callbackId];
     }];
 }
+
 
 - (void)setApplicationIconBadgeNumber:(CDVInvokedUrlCommand *)command
 {
