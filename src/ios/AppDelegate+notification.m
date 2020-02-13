@@ -130,7 +130,13 @@ NSString *const pushPluginApplicationDidBecomeActiveNotification = @"pushPluginA
         }
 
     } else {
-        completionHandler(UIBackgroundFetchResultNoData);
+        NSLog(@"app active");
+        PushPlugin *pushHandler = [self getCommandInstance:@"PushNotification"];
+        pushHandler.notificationMessage = userInfo;
+        pushHandler.isInline = YES;
+        [pushHandler notificationReceived];
+        
+        completionHandler(UIBackgroundFetchResultNewData);
     }
 }
 
